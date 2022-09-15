@@ -51,6 +51,10 @@ class LifeGame{
         cout<<"output: \n";
         Fr(MR,i) Fr(MC,j){ opr[gi(i,j)]=LifeC(i,j);if(opr[gi(i,j)]==1) cout<<i<<" "<<j<<"\n";}
         drawMatrix();
+        cords=opr;
+    }
+    ~LifeGame(){
+        delete opr;
     }
 };
 
