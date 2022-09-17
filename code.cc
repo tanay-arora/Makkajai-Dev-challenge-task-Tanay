@@ -1,4 +1,7 @@
 #include <iostream>
+#include <cstring>
+#include <string>
+#include <vector>
 using namespace std;
 
 #define Fr(n,i) for(i=0;i<n;i++)
@@ -101,15 +104,20 @@ void game::nextTick(graph *CP){
 
 }
 void game::start(){
-	int m,n,I,x,y,j,i;
-	cout<<"write number of rows in grid: "; cin>>m;
-    cout<<"write number of cells in a row: "; cin>>n;
-	G1.setGridSize(m,n);
-	cout<<"write number of inputs: "; cin>>I;
-    cout<<"enter your inputs x y separating with space: \n";
-	Fr(I,j){
-		cin>>x>>y;
-		G1.updateCellState(x,y,true);
+	int n=0,i;
+	string In;
+	vector<graph> V;
+	while(getline(cin,In)){
+		if(In.empty()) break;
+		int pos = In.find(","),x=stoi(In.substr(0,pos)),y=stoi(In.substr(pos+1));
+		graph ele;
+		ele.setValue(x,y);
+		V.push_back(ele);
+		if(x>n)n=x; if(y>n)n=y;
+	}
+	G1.setGridSize(n,n);
+	Fr(V.size(),i){
+		G1.updateCellState(V[i].x(),V[i].y(),true);
 	}
 }
 void game::setGraph(graph arr[]){
@@ -125,7 +133,7 @@ void game::setGraph(graph arr[]){
 void game::drawOutput(){
 	int i,j,row_size=G1.rowSize(), col_size=G1.colSize();
 	cout<<"Output\n";
-	Fr(row_size,i) Fr(col_size,j) if(G2.getState(i,j)) cout<<i<<" "<<j<<"\n"; 
+	Fr(row_size,i) Fr(col_size,j) if(G2.getState(i,j)) cout<<i<<","<<j<<"\n"; 
 	cout<<"Input graph\n";
 	Fr(row_size,i){Fr(col_size,j) cout<<G1.getState(i,j)<<" ";cout<<"\n";}
 	cout<<"Output graph\n";
