@@ -4,164 +4,133 @@
 #include <vector>
 using namespace std;
 
-#define Fr(n,i) for(i=0;i<n;i++)
-
-class graph{
-	int i,j;
-	public:
-		int x();
-		int y();
-		void setValue(int x,int y);
-};
-class cell{
-	bool Alive = false;
-	public:
-		void changeState(bool state);
-		bool IsAlive();
-};
-class grid:public cell{
-	cell *arr;
-	int row_len,col_len;
-	public:
-		void setGridSize(int x,int y);
-		void deleteGrid();
-		int rowSize();
-		int colSize();
-		int getIndex(int x,int y);
-		bool IsValid(int x,int y);
-		int countNeighbours(graph *CP,int x,int y);
-		bool willSurvive(graph *CP,int x,int y);
-		void updateCellState(int x,int y,bool state);
-		bool getState(int x,int y);
-};
-class game{
-	grid G1,G2;
-	public:
-		void setGraph(graph arr[]);
-		void nextTick(graph *CP);
-		void start();
-		void drawOutput();
-		void end();
+#define Alive true
+#define Dead false
+#define ToBool(n) (n==1)?Alive:Dead
+#define Fr(n,i,v) for(i=v;i<n;i++)
+#define upState(i,j,p,n) n.cellByIndex(i,j,p.LivingNeighboursCount(i,j))
+#define copyState(i,j,p,n) p.cellByIndex(i,j,-1,n.cellByIndex(i,j))
+struct graph{
+    int x;
+    int y;
 };
 
-void grid::setGridSize(int x,int y){
-	row_len=x+1;
-	col_len=y+1;
-	arr = new cell[row_len*col_len];
+class Cell{
+        bool alive;
+    public:
+        Cell();
+        void changeState(bool state);
+        void updateLife(int LivingNeighboursCount);
+        bool isAlive();
+};
+Cell::Cell(){
+    alive = Dead;
 }
-inline void grid::deleteGrid(){
-	delete arr;
+void Cell::changeState(bool state){
+    alive = state;
 }
-inline int grid::rowSize(){
-	return row_len;
+void Cell::updateLife(int LivingNeighboursCount){
+    if(alive && LivingNeighboursCount>3)
+        alive = Dead;
+    else if(alive && LivingNeighboursCount<2)
+        alive = Dead;
+    else if(LivingNeighboursCount ==3)
+        alive = Alive;
 }
-inline int grid::colSize(){
-	return col_len;
-}
-inline int grid::getIndex(int x,int y){
-	return (x*col_len+y);
-}
-bool grid::IsValid(int x,int y){
-	if(x>=0 && x<row_len && y>=0 && y<col_len) return true;
-	else return false;
-}
-int grid::countNeighbours(graph *CP,int x, int y){
-	int n=0,i,s,t;
-	Fr(8,i){
-		s=x+CP[i].x();
-		t=y+CP[i].y();
-		if(IsValid(s,t)) n+=getState(s,t);
-	} 
-	return n;
-}
-bool grid::willSurvive(graph *CP,int x,int y){
-	int n=countNeighbours(CP,x,y);
-	if(n<2 || n>3) return false;
-	if(n>1 && n<4 && getState(x,y) || n==3) return true;
-	else return false;
-}
-inline void grid::updateCellState(int x,int y,bool state){
-	arr[getIndex(x,y)].changeState(state);
-}
-inline bool grid::getState(int x,int y){
-	return arr[getIndex(x,y)].IsAlive();
+bool Cell::isAlive(){
+    return alive;
 }
 
-inline bool cell::IsAlive(){
-	return Alive;
-}
-inline void cell::changeState(bool state){
-	Alive=state;
+class VectOpr:public Cell{
+    public:
+        void loadElements(int size,vector<vector<Cell>> &vect);
+};
+
+void VectOpr::loadElements(int size,vector<vector<Cell>> &vect){
+    vect.resize(size); int i;
+    Fr(size,i,0) vect[i].resize(size);
 }
 
-void game::nextTick(graph *CP){
-	int row_size=G1.rowSize(), col_size=G1.colSize();
-	G2.setGridSize(row_size,col_size);
-	int i,j;
-	Fr(row_size,i) Fr(col_size,j) 
-	if(G1.willSurvive(CP,i,j)) G2.updateCellState(i,j,true);
-	else G2.updateCellState(i,j,false);
-
+class Grid:public VectOpr{
+    vector<vector<Cell>> Cells;
+    public:
+        int size();
+        void resizeGrid(int size);
+        bool IsInGrid(int maxSize, int x, int y);
+        int LivingNeighboursCount(int x, int y);
+        bool cellByIndex(int x,int y,int LivingNeighboursCount,int state);
+};
+bool Grid::cellByIndex(int x,int y,int LivingNeighboursCount=-1,int state=-1){
+    if(LivingNeighboursCount!=-1) Cells[x][y].updateLife(LivingNeighboursCount);
+    if(state!=-1) Cells[x][y].changeState(ToBool(state));
+    return Cells[x][y].isAlive();
 }
-void game::start(){
-	int n=0,i;
+void Grid::resizeGrid(int size){
+    loadElements(size,Cells);
+}
+bool Grid::IsInGrid(int maxSize, int x, int y){
+    return ((x>=0 && x < maxSize) && (y>=0 && y< maxSize ));
+}
+int Grid::LivingNeighboursCount(int x, int y){
+    int count=0,i,j,n=size();
+    Fr(x+2,i,x-1) Fr(y+2,j,y-1)
+        if(IsInGrid(n,i,j) && !(x==i && y==j))
+            count+= cellByIndex(i,j);
+    return count;
+}
+int Grid::size(){
+    return Cells.size();
+}
+class Game:public Grid{
+    Grid preGrid,newGrid;
+    public:
+        void nextTick(int n);
+        void Start();
+        int readInput(vector<graph> &V);
+        void setInitialSeed(vector<graph> &V);
+        void showResult();
+};
+int Game::readInput(vector<graph> &V){
+    int n=0,i,j,pos,x,y;
 	string In;
-	vector<graph> V;
 	while(getline(cin,In)){
 		if(In.empty()) break;
-		int pos = In.find(","),x=stoi(In.substr(0,pos)),y=stoi(In.substr(pos+1));
-		graph ele;
-		ele.setValue(x,y);
-		V.push_back(ele);
+		pos = In.find(",");
+        x=stoi(In.substr(0,pos));
+        y=stoi(In.substr(pos+1));
+		V.push_back({x,y});
 		if(x>n)n=x; if(y>n)n=y;
-	}
-	G1.setGridSize(n,n);
-	Fr(V.size(),i){
-		G1.updateCellState(V[i].x(),V[i].y(),true);
-	}
+    }
+    return ++n;
 }
-void game::setGraph(graph arr[]){
-    arr[0].setValue(1,0);
-    arr[1].setValue(0,1);
-    arr[2].setValue(-1,0);
-    arr[3].setValue(0,-1);
-    arr[4].setValue(1,1);
-    arr[5].setValue(-1,-1);
-    arr[6].setValue(-1,1);
-    arr[7].setValue(1,-1);
+void Game::setInitialSeed(vector<graph> &V){
+    int i;
+    Fr(V.size(),i,0) preGrid.cellByIndex(V[i].x,V[i].y,-1,1);
 }
-void game::drawOutput(){
-	int i,j,row_size=G1.rowSize(), col_size=G1.colSize();
-	cout<<"Output\n";
-	Fr(row_size,i) Fr(col_size,j) if(G2.getState(i,j)) cout<<i<<","<<j<<"\n"; 
-	cout<<"Input graph\n";
-	Fr(row_size,i){Fr(col_size,j) cout<<G1.getState(i,j)<<" ";cout<<"\n";}
-	cout<<"Output graph\n";
-	Fr(row_size,i){Fr(col_size,j) cout<<G2.getState(i,j)<<" ";cout<<"\n";}
+void Game::nextTick(int T){
+    int s,i,j,n=preGrid.size();
+    Fr(T,s,0){
+        Fr(n,i,0) Fr(n,j,0) copyState(i,j,newGrid,preGrid);
+        Fr(n,i,0) Fr(n,j,0) upState(i,j,preGrid,newGrid);
+        Fr(n,i,0) Fr(n,j,0) copyState(i,j,preGrid,newGrid);
+    }
 }
-void game::end(){
-	G1.deleteGrid();
-	G2.deleteGrid();	
+void Game::Start(){
+    vector<graph> V;
+    int n=readInput(V);
+    preGrid.resizeGrid(n);
+    newGrid.resizeGrid(n);
+    setInitialSeed(V);
+}
+void Game::showResult(){
+    int i,j,n=preGrid.size();
+    Fr(n,i,0) Fr(n,j,0) if(preGrid.cellByIndex(i,j)) cout<<i<<","<<j<<"\n";
 }
 
-inline int graph::x(){
-    return i;
-}
-inline int graph::y(){
-    return j;
-}
-void graph::setValue(int x,int y){
-	i=x;
-	j=y;
-}
-
-int main() {
-	game myGame;
-	graph CP[8];
-	myGame.setGraph(CP);
-	myGame.start();
-	myGame.nextTick(CP);
-	myGame.drawOutput();
-	myGame.end();
-	return 0;
+int main(){
+    Game myGame;
+    myGame.Start();
+    myGame.nextTick(1);
+    myGame.showResult();
+    return 0;
 }
